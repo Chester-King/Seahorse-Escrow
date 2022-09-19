@@ -27,8 +27,9 @@ pub fn initialize_handler(
     let mut initializer_deposit_token_account = &mut ctx.accounts.initializer_deposit_token_account;
     let mut initializer_receive_token_account = &mut ctx.accounts.initializer_receive_token_account;
     let mut escrow_account = &mut ctx.accounts.escrow_account;
-    let mut author: token::TokenAccount =
-        <token::TokenAccount as TryFrom<_>>::try_from(vault_account).unwrap();
+    let mut author = vault_account;
+    // let mut author: token::TokenAccount =
+    //     <token::TokenAccount as TryFrom<_>>::try_from(vault_account).unwrap();
 
     require!(
         initializer_deposit_token_account.amount >= initializer_amount,
