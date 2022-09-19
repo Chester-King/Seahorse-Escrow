@@ -63,7 +63,7 @@ pub fn cancel_handler(mut ctx: Context<Cancel>, mut bump1: u8, mut bump2: u8) ->
     let mut escrow_account = &mut ctx.accounts.escrow_account;
 
     require!(
-        (escrow_account.initializer_key == initializer.key()),
+        escrow_account.initializer_key == initializer.key(),
         ProgramError::E001
     );
 
@@ -82,6 +82,53 @@ pub fn cancel_handler(mut ctx: Context<Cancel>, mut bump1: u8, mut bump2: u8) ->
             outer.as_slice()
         ),
         escrow_account.initializer_amount,
+    )?;
+
+    Ok(())
+}
+
+pub fn exchange_handler(mut ctx: Context<Exchange>, mut bump1: u8, mut bump2: u8) -> Result<()> {
+    let mut taker = &mut ctx.accounts.taker;
+    let mut vault_account = &mut ctx.accounts.vault_account;
+    let mut taker_deposit_token_account = &mut ctx.accounts.taker_deposit_token_account;
+    let mut taker_receive_token_account = &mut ctx.accounts.taker_receive_token_account;
+    let mut initializer_deposit_token_account = &mut ctx.accounts.initializer_deposit_token_account;
+    let mut initializer_receive_token_account = &mut ctx.accounts.initializer_receive_token_account;
+    let mut escrow_account = &mut ctx.accounts.escrow_account;
+
+    require!(
+        (escrow_account.initializer_key == initializer_deposit_token_account.owner)
+            && (escrow_account.initializer_key == initializer_receive_token_account.owner),
+        ProgramError::E002
+    );
+
+    let bump_vector = bump1.to_le_bytes();
+    let inner = vec![b"token-seed".as_ref(),bump_vector.as_ref()];
+    let outer = vec![inner.as_slice()];
+
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            token::Transfer {
+                from: vault_account.to_account_info(),
+                authority: vault_account.to_account_info(),
+                to: taker_deposit_token_account.to_account_info(),
+            },
+            outer.as_slice()
+        ),
+        escrow_account.initializer_amount,
+    )?;
+
+    token::transfer(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::Transfer {
+                from: taker_receive_token_account.to_account_info(),
+                authority: taker.to_account_info(),
+                to: initializer_receive_token_account.to_account_info(),
+            },
+        ),
+        escrow_account.taker_amount,
     )?;
 
     Ok(())
@@ -139,6 +186,30 @@ pub struct Cancel<'info> {
     pub token_program: Program<'info, token::Token>,
 }
 
+#[derive(Accounts)]
+#[instruction(_b1 : u8,_b2 : u8)]
+pub struct Exchange<'info> {
+    #[account(mut)]
+    pub taker: Signer<'info>,
+    #[account(mut,
+        seeds = ["token-seed".as_bytes().as_ref()],
+        bump=_b1)]
+    pub vault_account: Box<Account<'info, token::TokenAccount>>,
+    #[account(mut)]
+    pub taker_deposit_token_account: Box<Account<'info, token::TokenAccount>>,
+    #[account(mut)]
+    pub taker_receive_token_account: Box<Account<'info, token::TokenAccount>>,
+    #[account(mut)]
+    pub initializer_deposit_token_account: Box<Account<'info, token::TokenAccount>>,
+    #[account(mut)]
+    pub initializer_receive_token_account: Box<Account<'info, token::TokenAccount>>,
+    #[account(mut,
+        seeds = ["escrow-main".as_bytes().as_ref()],
+        bump=_b2)]
+    pub escrow_account: Box<Account<'info, EscrowAccount>>,
+    pub token_program: Program<'info, token::Token>,
+}
+
 #[program]
 pub mod escrow {
     use super::*;
@@ -154,12 +225,18 @@ pub mod escrow {
     pub fn cancel(ctx: Context<Cancel>, bump1: u8, bump2: u8) -> Result<()> {
         cancel_handler(ctx, bump1, bump2)
     }
+
+    pub fn exchange(ctx: Context<Exchange>, bump1: u8, bump2: u8) -> Result<()> {
+        exchange_handler(ctx, bump1, bump2)
+    }
 }
 
 #[error_code]
 pub enum ProgramError {
     #[msg("In-sufficient balance")]
     E000,
-    #[msg("Constraint violation")]
+    #[msg("Cancel Constraint violation")]
     E001,
+    #[msg("Exchange Constraint violation")]
+    E002,
 }

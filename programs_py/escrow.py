@@ -56,12 +56,40 @@ def cancel(initializer: Signer,
             bump1 : u8,
             bump2 : u8
             ):
-  assert ((escrow_account.initializer_key == initializer.key()) and (escrow_account.initializer_deposit_token_account == initializer_deposit_token_account.key())), "Constraint violation"
+  assert ((escrow_account.initializer_key == initializer.key())), "Cancel Constraint violation"
   
   vault_account.transfer(
     authority=vault_account,
     to=initializer_deposit_token_account,
     amount=escrow_account.initializer_amount
+  )
+  
+
+@instruction
+def exchange(taker: Signer,
+            vault_account: TokenAccount,
+            taker_deposit_token_account : TokenAccount,
+            taker_receive_token_account : TokenAccount,
+            initializer_deposit_token_account : TokenAccount,
+            initializer_receive_token_account : TokenAccount,
+            escrow_account: EscrowAccount,
+            bump1 : u8,
+            bump2 : u8
+            ):
+  assert ((escrow_account.initializer_key == initializer_deposit_token_account.owner) and (escrow_account.initializer_key == initializer_receive_token_account.owner)), "Exchange Constraint violation"
+  
+
+
+  vault_account.transfer(
+    authority=vault_account,
+    to=taker_deposit_token_account,
+    amount=escrow_account.initializer_amount
+  )
+
+  taker_receive_token_account.transfer(
+    authority=taker,
+    to=initializer_receive_token_account,
+    amount=escrow_account.taker_amount
   )
   
   
