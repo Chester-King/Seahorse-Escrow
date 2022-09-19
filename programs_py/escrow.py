@@ -1,6 +1,7 @@
 # escrow
 # Built with Seahorse v0.1.6
 
+from tokenize import Token
 from seahorse.prelude import *
 
 declare_id('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
@@ -22,14 +23,26 @@ def initialize(initializer: Signer,
                 initializer_amount: u64,
                 taker_amount: u64
                 ):
+  # init a vault
   vault_account.init(
     payer = initializer,
     seeds = ["token-seed"],
     mint = mint,
-    authority = initializer,
+    authority = vault_account,
   )
-  assert initializer_deposit_token_account.amount >= initializer_amount, 'In-sufficent balance'
+  author : TokenAccount = vault_account
+  assert initializer_deposit_token_account.amount >= initializer_amount, 'In-sufficient balance'
   # Initialize the calculator and set the owner
   escrow_account.initializer_key = initializer.key()
-  # init a vault
+  escrow_account.initializer_amount = initializer_amount
+  escrow_account.taker_amount = taker_amount
+
+  initializer_deposit_token_account.transfer(
+    authority=initializer,
+    to=author,
+    amount=initializer_amount
+  )
+
+  
+  
   

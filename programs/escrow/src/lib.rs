@@ -27,6 +27,8 @@ pub fn initialize_handler(
     let mut initializer_deposit_token_account = &mut ctx.accounts.initializer_deposit_token_account;
     let mut initializer_receive_token_account = &mut ctx.accounts.initializer_receive_token_account;
     let mut escrow_account = &mut ctx.accounts.escrow_account;
+    let mut author: token::TokenAccount =
+        <token::TokenAccount as TryFrom<_>>::try_from(vault_account).unwrap();
 
     require!(
         initializer_deposit_token_account.amount >= initializer_amount,
@@ -35,6 +37,22 @@ pub fn initialize_handler(
 
     escrow_account.initializer_key = initializer.key();
 
+    escrow_account.initializer_amount = initializer_amount;
+
+    escrow_account.taker_amount = taker_amount;
+
+    token::transfer(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::Transfer {
+                from: initializer_deposit_token_account.to_account_info(),
+                authority: initializer.to_account_info(),
+                to: author.to_account_info(),
+            },
+        ),
+        initializer_amount,
+    )?;
+
     Ok(())
 }
 
@@ -42,7 +60,7 @@ pub fn initialize_handler(
 pub struct Initialize<'info> {
     #[account(mut)]
     pub initializer: Signer<'info>,
-    // #[account(mut)]
+    #[account(mut)]
     pub mint: Box<Account<'info, token::Mint>>,
     #[account(
         init,
@@ -50,7 +68,7 @@ pub struct Initialize<'info> {
         seeds = ["token-seed".as_bytes().as_ref()],
         bump,
         token::mint = mint,
-        token::authority = initializer
+        token::authority = vault_account
     )]
     pub vault_account: Box<Account<'info, token::TokenAccount>>,
     #[account(mut)]
@@ -64,7 +82,6 @@ pub struct Initialize<'info> {
     // This is what is needed
     #[account(zero)]
     pub escrow_account: Box<Account<'info, EscrowAccount>>,
-
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, token::Token>,
     pub rent: Sysvar<'info, Rent>,
@@ -85,6 +102,6 @@ pub mod escrow {
 
 #[error_code]
 pub enum ProgramError {
-    #[msg("In-sufficent balance")]
+    #[msg("In-sufficient balance")]
     E000,
 }
