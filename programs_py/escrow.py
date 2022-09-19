@@ -36,7 +36,6 @@ def initialize(initializer: Signer,
   )
   author : TokenAccount = vault_account
   assert initializer_deposit_token_account.amount >= initializer_amount, 'In-sufficient balance'
-  # Initialize the calculator and set the owner
   escrow_account.initializer_key = initializer.key()
   escrow_account.initializer_amount = initializer_amount
   escrow_account.taker_amount = taker_amount
