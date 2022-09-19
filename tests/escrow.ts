@@ -132,4 +132,42 @@ describe("escrow", () => {
       await console.log("base balance in ATA of receiving tokens: ", await program.provider.connection.getTokenAccountBalance(base_ata2));
 
   });
+  
+  it("Cancel Escrow", async () => {
+    // Add your test here.
+
+      // Deterministically finding out the project token's ATA owned by provider.wallet
+      let base_ata = await spl.getAssociatedTokenAddress(basemintKey.publicKey, provider.wallet.publicKey, false, spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID);
+      let base_ata2 = await spl.getAssociatedTokenAddress(basemintKey2.publicKey, provider.wallet.publicKey, false, spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID);
+
+      let [davaultPDA, vPDA_bump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("token-seed"),
+          
+        ],
+        program.programId
+        );
+      let [escrPDA, ePDA_bump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("escrow-main"),
+          
+        ],
+        program.programId
+        );
+
+      // Creating transaction to Initialize basemintKey keypair as a token and then minting tokens to  ATA owned by provider.wallet
+
+      const tx = await program.methods.cancel(vPDA_bump,ePDA_bump).accounts({
+        initializer : provider.wallet.publicKey,
+        mint: basemintKey.publicKey,
+        vaultAccount : davaultPDA,
+        initializerDepositTokenAccount : base_ata,
+        escrowAccount : escrPDA,
+        tokenProgram: spl.TOKEN_PROGRAM_ID
+      }).rpc();
+      await console.log("base balance in ATA after initialization: ", await program.provider.connection.getTokenAccountBalance(base_ata));
+      
+      await console.log("base balance in ATA of receiving tokens: ", await program.provider.connection.getTokenAccountBalance(base_ata2));
+
+  });
 });

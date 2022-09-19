@@ -47,6 +47,21 @@ def initialize(initializer: Signer,
     amount=initializer_amount
   )
 
+@instruction
+def cancel(initializer: Signer, 
+            mint: TokenMint,
+            vault_account: TokenAccount,
+            initializer_deposit_token_account : TokenAccount,
+            escrow_account: EscrowAccount,
+            bump1 : u8,
+            bump2 : u8
+            ):
+  assert ((escrow_account.initializer_key == initializer.key()) and (escrow_account.initializer_deposit_token_account == initializer_deposit_token_account.key())), "Constraint violation"
   
+  vault_account.transfer(
+    authority=vault_account,
+    to=initializer_deposit_token_account,
+    amount=escrow_account.initializer_amount
+  )
   
   
