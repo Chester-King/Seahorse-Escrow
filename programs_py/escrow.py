@@ -14,16 +14,22 @@ class EscrowAccount(Account):
 
 @instruction
 def initialize(initializer: Signer, 
-                escrow_account: EscrowAccount, 
                 mint: TokenMint,
-                vault_account: Empty[TokenAccount]):
-  # Initialize the calculator and set the owner
-  escrow_account.initializer_key = initializer.key()
-  # init a vault
+                vault_account: Empty[TokenAccount],
+                initializer_deposit_token_account : TokenAccount,
+                initializer_receive_token_account : TokenAccount,
+                escrow_account: EscrowAccount,
+                initializer_amount: u64,
+                taker_amount: u64
+                ):
   vault_account.init(
     payer = initializer,
     seeds = ["token-seed"],
     mint = mint,
     authority = initializer,
   )
+  assert initializer_deposit_token_account.amount >= initializer_amount, 'In-sufficent balance'
+  # Initialize the calculator and set the owner
+  escrow_account.initializer_key = initializer.key()
+  # init a vault
   
