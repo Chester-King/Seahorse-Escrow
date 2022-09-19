@@ -19,7 +19,7 @@ def initialize(initializer: Signer,
                 vault_account: Empty[TokenAccount],
                 initializer_deposit_token_account : TokenAccount,
                 initializer_receive_token_account : TokenAccount,
-                escrow_account: EscrowAccount,
+                escrow_account: Empty[EscrowAccount],
                 initializer_amount: u64,
                 taker_amount: u64
                 ):
@@ -29,6 +29,10 @@ def initialize(initializer: Signer,
     seeds = ["token-seed"],
     mint = mint,
     authority = vault_account,
+  )
+  escrow_account.init(
+    payer = initializer,
+    seeds = ["escrow-main"]
   )
   author : TokenAccount = vault_account
   assert initializer_deposit_token_account.amount >= initializer_amount, 'In-sufficient balance'
